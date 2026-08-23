@@ -6,6 +6,7 @@ import hashlib
 import html
 import os
 import tempfile
+import uuid
 
 import streamlit as st
 
@@ -28,10 +29,12 @@ from yourvoic_tts import (
     generate_speech,
     get_last_tts_error,
     tts_available,
+    tts_backend_name,
 )
 
 
 MAX_CHANCES = 3
+
 
 VERSE_MODE_DATASET = (
     "Within Dataset Only"
@@ -41,10 +44,32 @@ VERSE_MODE_OPEN = (
     "Allow Other Verses"
 )
 
+
+RULE_LABELS = {
+
+    "Strict — last अक्षर only":
+        RULE_SET_A,
+
+    "Swara Fallback — continue when strict path ends":
+        RULE_SET_B,
+}
+
+
+DIFFICULTIES = [
+
+    DIFFICULTY_HARD,
+
+    DIFFICULTY_MEDIUM,
+
+    DIFFICULTY_EASY,
+]
+
+
 VYOMA_LOGO_URL = (
     "https://avatars.githubusercontent.com/"
     "u/108797006?v=4"
 )
+
 
 VYOMA_REPO_URL = (
     "https://github.com/"
@@ -58,37 +83,71 @@ VYOMA_REPO_URL = (
 # ============================================================
 
 st.set_page_config(
+
     page_title=(
         "Sanskrit Antyakshari Krida"
     ),
+
     page_icon="🕉️",
+
     layout="wide",
+
     initial_sidebar_state="expanded",
 )
 
 
 # ============================================================
-# STYLE
+# CSS
 # ============================================================
 
 st.html(
     """
 <style>
 
-.stApp {
-    background: #F5F8FC;
+:root {
+
+    --vyoma: #0B5FA5;
+
+    --vyoma-dark: #083C6D;
+
+    --gold: #E7B73C;
+
+    --ink: #102A43;
+
+    --muted: #66788A;
+
+    --line: #DCE7F1;
+
+    --soft: #F5F8FC;
 }
+
+
+.stApp {
+
+    background:
+        var(--soft);
+}
+
 
 .block-container {
-    max-width: 1320px;
-    padding-top: 3.5rem;
-    padding-bottom: 2.5rem;
+
+    max-width:
+        1320px;
+
+    padding-top:
+        3.3rem;
+
+    padding-bottom:
+        3rem;
 }
 
 
-/* SIDEBAR */
+/* =========================================================
+   SIDEBAR
+   ========================================================= */
 
 [data-testid="stSidebar"] {
+
     background:
         linear-gradient(
             180deg,
@@ -97,20 +156,27 @@ st.html(
         );
 }
 
+
 [data-testid="stSidebar"] * {
-    color: #F7FAFC;
-}
 
-[data-testid="stSidebar"]
-.stCaptionContainer,
-
-[data-testid="stSidebar"]
-small {
-    color: #C8D6E5 !important;
+    color:
+        #F7FAFC;
 }
 
 
-/* HERO */
+[data-testid="stSidebar"] small,
+
+[data-testid="stSidebar"]
+[data-testid="stCaptionContainer"] {
+
+    color:
+        #C8D6E5 !important;
+}
+
+
+/* =========================================================
+   HERO
+   ========================================================= */
 
 .hero-card {
 
@@ -122,68 +188,85 @@ small {
             #1677BC 100%
         );
 
-    border-radius: 20px;
+    border-radius:
+        22px;
 
     border-bottom:
-        5px solid #E7B73C;
+        5px solid
+        var(--gold);
 
     box-shadow:
-        0 12px 30px
+        0 14px 32px
         rgba(8,60,109,.18);
 
     padding:
-        25px 28px;
+        27px 29px 25px;
 
     margin-bottom:
-        22px;
+        18px;
 
-    color: white;
+    color:
+        white;
 
-    position: relative;
+    position:
+        relative;
 }
 
 
 .hero-title {
 
-    font-size: 2.15rem;
+    font-size:
+        2.1rem;
 
-    line-height: 1.2;
+    line-height:
+        1.22;
 
-    font-weight: 800;
+    font-weight:
+        850;
 
-    color: white;
-
-    margin: 0;
+    color:
+        white;
 }
 
 
 .hero-subtitle {
 
-    margin-top: 9px;
+    margin-top:
+        8px;
 
-    max-width: 850px;
+    color:
+        #E5F1FB;
 
-    color: #E5F1FB;
+    font-size:
+        .98rem;
 
-    font-size: 1rem;
+    line-height:
+        1.55;
 
-    line-height: 1.55;
+    max-width:
+        850px;
 }
 
 
 .hero-badge {
 
-    position: absolute;
+    position:
+        absolute;
 
-    top: 15px;
+    right:
+        17px;
 
-    right: 17px;
+    top:
+        15px;
 
-    display: flex;
+    display:
+        flex;
 
-    align-items: center;
+    align-items:
+        center;
 
-    gap: 7px;
+    gap:
+        7px;
 
     background:
         rgba(
@@ -199,7 +282,7 @@ small {
             255,
             255,
             255,
-            .15
+            .16
         );
 
     border-radius:
@@ -208,7 +291,8 @@ small {
     padding:
         6px 10px;
 
-    color: white;
+    color:
+        white;
 
     font-size:
         .72rem;
@@ -217,195 +301,400 @@ small {
 
 .hero-badge img {
 
-    width: 23px;
+    width:
+        23px;
 
-    height: 23px;
+    height:
+        23px;
 
-    border-radius: 50%;
+    border-radius:
+        50%;
 }
 
 
-.hero-chips {
+/* =========================================================
+   GAME STATUS
+   ========================================================= */
 
-    display: flex;
+.status-strip {
 
-    flex-wrap: wrap;
+    display:
+        grid;
 
-    gap: 9px;
+    grid-template-columns:
+        minmax(
+            260px,
+            1.8fr
+        )
+        1fr
+        1fr;
 
-    margin-top: 16px;
+    gap:
+        12px;
+
+    margin:
+        0 0 18px;
 }
 
 
-.hero-chip {
+.status-card {
 
     background:
-        rgba(
-            255,
-            255,
-            255,
-            .13
-        );
+        white;
 
     border:
         1px solid
-        rgba(
-            255,
-            255,
-            255,
-            .14
-        );
+        var(--line);
 
     border-radius:
-        10px;
+        15px;
 
     padding:
-        7px 10px;
+        13px 16px;
 
-    color: white;
-
-    font-size:
-        .78rem;
+    box-shadow:
+        0 5px 16px
+        rgba(
+            16,
+            42,
+            67,
+            .05
+        );
 }
 
 
-/* TARGET */
-
-.target-card {
+.status-card.primary {
 
     background:
         linear-gradient(
-            180deg,
-            #FFFFFF 0%,
-            #F9FBFE 100%
+            135deg,
+            #EAF4FF 0%,
+            #F8FBFF 100%
         );
 
-    border:
-        2px solid #C9DFF3;
-
-    border-radius:
-        17px;
-
-    box-shadow:
-        0 7px 20px
-        rgba(20,45,75,.06);
-
-    text-align:
-        center;
-
-    padding:
-        19px 20px 20px;
-
-    margin-bottom:
-        16px;
+    border-color:
+        #BDD8F1;
 }
 
 
-.target-label {
+.status-kicker {
 
-    color: #5D7185;
+    color:
+        var(--muted);
 
     font-size:
-        .75rem;
+        .7rem;
 
     font-weight:
         800;
 
     letter-spacing:
-        .9px;
+        .7px;
 
     text-transform:
         uppercase;
 }
 
 
-.target-akshara {
+.status-main {
 
-    color: #083C6D;
+    color:
+        var(--vyoma-dark);
 
     font-size:
-        3.6rem;
+        1.45rem;
+
+    font-weight:
+        850;
+
+    margin-top:
+        3px;
 
     line-height:
-        1.1;
+        1.2;
+}
+
+
+.status-sub {
+
+    color:
+        var(--muted);
+
+    font-size:
+        .76rem;
+
+    margin-top:
+        3px;
+}
+
+
+/* =========================================================
+   TURN FLOW
+   ========================================================= */
+
+.turn-header {
+
+    background:
+        white;
+
+    border:
+        1px solid
+        var(--line);
+
+    border-radius:
+        14px;
+
+    padding:
+        13px 15px;
+
+    margin:
+        8px 0 10px;
+
+    box-shadow:
+        0 5px 16px
+        rgba(
+            16,
+            42,
+            67,
+            .04
+        );
+}
+
+
+.turn-heading {
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    gap:
+        9px;
+
+    color:
+        var(--ink);
+
+    font-size:
+        1.15rem;
+
+    font-weight:
+        850;
+}
+
+
+.step-badge {
+
+    width:
+        28px;
+
+    height:
+        28px;
+
+    display:
+        inline-flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        center;
+
+    border-radius:
+        50%;
+
+    background:
+        var(--vyoma);
+
+    color:
+        white;
+
+    font-size:
+        .82rem;
+
+    font-weight:
+        850;
+}
+
+
+.turn-help {
+
+    color:
+        var(--muted);
+
+    font-size:
+        .8rem;
+
+    margin-top:
+        5px;
+
+    line-height:
+        1.45;
+}
+
+
+.review-ready {
+
+    background:
+        #EAF8F0;
+
+    border:
+        1px solid
+        #BFE3CD;
+
+    border-left:
+        5px solid
+        #2D8A55;
+
+    border-radius:
+        11px;
+
+    padding:
+        10px 12px;
+
+    margin:
+        9px 0 12px;
+
+    color:
+        #215F3D;
+
+    font-size:
+        .83rem;
+
+    font-weight:
+        700;
+}
+
+
+/* =========================================================
+   PREVIOUS VERSES
+   ========================================================= */
+
+.previous-card {
+
+    background:
+        #F8FBFE;
+
+    border:
+        1px solid
+        #DCE7F1;
+
+    border-radius:
+        13px;
+
+    padding:
+        11px 13px;
+
+    margin-bottom:
+        10px;
+}
+
+
+.previous-label {
+
+    color:
+        #6B7C93;
+
+    font-size:
+        .68rem;
+
+    font-weight:
+        800;
+
+    text-transform:
+        uppercase;
+
+    letter-spacing:
+        .55px;
+}
+
+
+.previous-text {
+
+    color:
+        #243B53;
+
+    font-size:
+        .93rem;
+
+    line-height:
+        1.45;
+
+    margin-top:
+        4px;
+}
+
+
+/* =========================================================
+   HISTORY
+   ========================================================= */
+
+.timeline-heading {
+
+    color:
+        var(--ink);
+
+    font-size:
+        1.35rem;
 
     font-weight:
         850;
 
     margin:
-        8px 0;
-}
-
-
-.target-note {
-
-    color:
-        #334E68;
-
-    font-size:
-        .92rem;
-}
-
-
-/* HISTORY */
-
-.history-heading {
-
-    color:
-        #102A43;
-
-    font-size:
-        1.55rem;
-
-    font-weight:
-        800;
-
-    margin:
-        0 0 13px;
+        1px 0 11px;
 }
 
 
 .move-card {
 
     background:
-        #FFFFFF;
+        white;
 
     border:
-        1px solid #E7EDF4;
+        1px solid
+        #E7EDF4;
 
     border-radius:
         13px;
 
     padding:
-        13px 14px;
+        12px 13px;
 
     margin-bottom:
         10px;
 
     box-shadow:
         0 4px 12px
-        rgba(16,42,67,.05);
+        rgba(
+            16,
+            42,
+            67,
+            .04
+        );
 }
 
 
 .move-player {
 
     border-left:
-        5px solid #0B5FA5;
+        5px solid
+        var(--vyoma);
 }
 
 
 .move-computer {
 
     border-left:
-        5px solid #E48A2A;
+        5px solid
+        #E48A2A;
 }
 
 
 .move-system {
 
     border-left:
-        5px solid #73889B;
+        5px solid
+        #73889B;
 
     background:
         #F9FBFD;
@@ -415,13 +704,16 @@ small {
 .move-speaker {
 
     color:
-        #102A43;
+        var(--ink);
 
     font-weight:
-        800;
+        850;
 
     margin-bottom:
         4px;
+
+    font-size:
+        .82rem;
 }
 
 
@@ -431,44 +723,44 @@ small {
         #243B53;
 
     line-height:
-        1.52;
+        1.5;
 
     font-size:
-        1.02rem;
+        .98rem;
 }
 
 
 .move-meta {
 
     margin-top:
-        7px;
+        6px;
 
     color:
         #718096;
 
     font-size:
-        .72rem;
+        .7rem;
 }
 
 
-/* VAGDHENU */
+/* =========================================================
+   TTS
+   ========================================================= */
 
-.vagdhenu-note {
+.tts-note {
 
     background:
         #EEF6FF;
 
     border:
-        1px solid #CFE3F6;
+        1px solid
+        #CFE3F6;
 
     border-radius:
         10px;
 
     padding:
         9px 10px;
-
-    margin-top:
-        7px;
 
     color:
         #315A7D;
@@ -481,7 +773,9 @@ small {
 }
 
 
-/* FOOTER */
+/* =========================================================
+   FOOTER
+   ========================================================= */
 
 .footer-credit {
 
@@ -489,7 +783,8 @@ small {
         28px;
 
     border-top:
-        1px solid #D9E3EC;
+        1px solid
+        #D9E3EC;
 
     padding-top:
         14px;
@@ -507,9 +802,11 @@ small {
 
 .footer-credit img {
 
-    width: 19px;
+    width:
+        19px;
 
-    height: 19px;
+    height:
+        19px;
 
     border-radius:
         50%;
@@ -522,15 +819,23 @@ small {
 }
 
 
-/* STREAMLIT COMPONENTS */
+/* =========================================================
+   STREAMLIT
+   ========================================================= */
 
-.stButton > button {
+.stButton > button,
+
+[data-testid="stFormSubmitButton"]
+> button {
 
     border-radius:
-        10px !important;
+        11px !important;
 
     font-weight:
-        700 !important;
+        800 !important;
+
+    min-height:
+        2.65rem;
 }
 
 
@@ -559,10 +864,29 @@ div[data-testid="stMetric"] {
 }
 
 
-div[data-testid="stMetricLabel"] {
+@media (
+    max-width:
+    800px
+) {
 
-    font-weight:
-        700;
+    .status-strip {
+
+        grid-template-columns:
+            1fr;
+    }
+
+
+    .hero-badge {
+
+        position:
+            static;
+
+        width:
+            fit-content;
+
+        margin-bottom:
+            10px;
+    }
 }
 
 </style>
@@ -571,46 +895,69 @@ div[data-testid="stMetricLabel"] {
 
 
 # ============================================================
-# SESSION STATE
+# STATE
 # ============================================================
 
-def init_state():
+def init_state() -> None:
 
     defaults = {
 
-        "history": [],
+        "history":
+            [],
 
-        "used_ids": set(),
+        "used_ids":
+            set(),
 
-        "used_custom_texts": set(),
+        "used_custom_texts":
+            set(),
 
-        "expected_letter": None,
+        "expected_letter":
+            None,
 
-        "free_start_allowed": True,
+        "free_start_allowed":
+            True,
 
-        "player_score": 0,
+        "player_score":
+            0,
 
-        "computer_score": 0,
+        "computer_score":
+            0,
 
-        "chances_lost": 0,
+        "chances_lost":
+            0,
 
-        "game_over": False,
+        "game_over":
+            False,
 
-        "last_audio_digest": "",
+        "last_audio_digest":
+            "",
 
-        "verse_input": "",
+        "verse_input":
+            "",
 
-        "pending_clear_input": False,
+        "pending_clear_input":
+            False,
 
-        "audio_nonce": 0,
+        "audio_nonce":
+            0,
 
-        "last_tts_path": "",
+        "last_tts_path":
+            "",
 
-        "last_tts_error": "",
+        "last_tts_error":
+            "",
 
-        "last_error": "",
+        "last_error":
+            "",
 
-        "active_corpus": "",
+        "turn_feedback":
+            "",
+
+        "active_corpus":
+            "",
+
+        "session_token":
+            uuid.uuid4().hex[:12],
     }
 
 
@@ -623,7 +970,35 @@ def init_state():
             ] = value
 
 
-def reset_game():
+def cleanup_last_tts() -> None:
+
+    path = st.session_state.get(
+        "last_tts_path",
+        "",
+    )
+
+
+    if (
+        path
+        and path.startswith(
+            tempfile.gettempdir()
+        )
+        and os.path.exists(path)
+    ):
+
+        try:
+
+            os.remove(path)
+
+        except OSError:
+
+            pass
+
+
+def reset_game() -> None:
+
+    cleanup_last_tts()
+
 
     st.session_state.history = []
 
@@ -657,8 +1032,10 @@ def reset_game():
 
     st.session_state.last_error = ""
 
+    st.session_state.turn_feedback = ""
 
-def clear_input():
+
+def clear_input() -> None:
 
     st.session_state.verse_input = ""
 
@@ -680,8 +1057,8 @@ init_state()
     show_spinner=False
 )
 def load_engine(
-    csv_path: str
-):
+    csv_path: str,
+) -> AntyakshariEngine:
 
     return AntyakshariEngine(
         csv_path
@@ -689,13 +1066,14 @@ def load_engine(
 
 
 def verse_reference(
-    entry
-):
+    entry,
+) -> str:
 
     chapter = str(
         entry.chapter
         or ""
     ).strip()
+
 
     number = str(
         entry.verse_number
@@ -725,12 +1103,18 @@ def verse_reference(
 # ============================================================
 
 def log_move(
-    speaker,
-    text,
-    reference="",
-    note="",
-    required_letter="",
-):
+
+    speaker: str,
+
+    text: str,
+
+    reference: str = "",
+
+    note: str = "",
+
+    required_letter: str = "",
+
+) -> None:
 
     st.session_state.history.append(
         {
@@ -753,48 +1137,73 @@ def log_move(
     )
 
 
-def render_history():
-
-    if not st.session_state.history:
-
-        st.info(
-            "No moves yet. "
-            "Record or type a "
-            "Sanskrit verse to begin."
-        )
-
-        return
-
+def last_move(
+    speaker: str,
+):
 
     for move in reversed(
         st.session_state.history
     ):
 
         if (
-            move["speaker"]
-            == "Player"
+            move[
+                "speaker"
+            ]
+            ==
+            speaker
         ):
+
+            return move
+
+
+    return None
+
+
+def render_history() -> None:
+
+    if not st.session_state.history:
+
+        st.info(
+
+            "Your verse chain will appear here "
+            "as soon as you submit the first verse."
+        )
+
+        return
+
+
+    visible_turn = 0
+
+
+    for move in st.session_state.history:
+
+
+        speaker = move[
+            "speaker"
+        ]
+
+
+        if speaker == "Player":
+
+            visible_turn += 1
 
             css_class = (
                 "move-player"
             )
 
             label = (
-                "👤 Player"
+                f"Round {visible_turn} · 👤 You"
             )
 
 
-        elif (
-            move["speaker"]
-            == "Computer"
-        ):
+        elif speaker == "Computer":
 
             css_class = (
                 "move-computer"
             )
 
             label = (
-                "🤖 Computer"
+                f"Round {visible_turn} · 🤖 Computer"
             )
 
 
@@ -805,7 +1214,7 @@ def render_history():
             )
 
             label = (
-                "ℹ️ System"
+                "ℹ️ Game"
             )
 
 
@@ -818,7 +1227,8 @@ def render_history():
 
             meta.append(
                 "Ref: "
-                + move[
+                +
+                move[
                     "reference"
                 ]
             )
@@ -830,7 +1240,8 @@ def render_history():
 
             meta.append(
                 "Required: "
-                + move[
+                +
+                move[
                     "required_letter"
                 ]
             )
@@ -851,6 +1262,7 @@ def render_history():
             label
         )
 
+
         safe_text = html.escape(
             str(
                 move[
@@ -858,6 +1270,7 @@ def render_history():
                 ]
             )
         )
+
 
         safe_meta = html.escape(
             " · ".join(
@@ -891,23 +1304,28 @@ def render_history():
 # ============================================================
 
 def penalize(
-    message
-):
+    message: str,
+) -> None:
 
     st.session_state.chances_lost += 1
+
 
     st.session_state.last_error = (
         message
     )
 
 
+    st.session_state.turn_feedback = ""
+
+
     log_move(
+
         "System",
 
         message,
 
         note=(
-            "Invalid player move"
+            "Invalid move — one chance used"
         ),
     )
 
@@ -924,10 +1342,14 @@ def penalize(
 
 
 def update_requirement(
+
     engine,
+
     bot_entry,
-    rule_set,
-):
+
+    rule_set: str,
+
+) -> None:
 
     result = (
         engine
@@ -966,10 +1388,9 @@ def update_requirement(
             "System",
 
             (
-                "No continuation exists "
-                "in the selected corpus. "
-                "You may start with any "
-                "unused verse."
+                "No continuation remains in the "
+                "selected corpus. "
+                "Your next turn is a free start."
             ),
 
             note=str(
@@ -978,6 +1399,20 @@ def update_requirement(
                 ]
             ),
         )
+
+
+def tts_output_path() -> str:
+
+    return os.path.join(
+
+        tempfile.gettempdir(),
+
+        (
+            "vagdhenu_"
+            f"{st.session_state.session_token}"
+            ".wav"
+        ),
+    )
 
 
 # ============================================================
@@ -1011,40 +1446,14 @@ st.html(
 
     f'<div class="hero-subtitle">'
 
-    f'Interactive Sanskrit '
-    f'Antyakshari with '
+    f'Listen to the computer, '
+    f'follow the required अक्षर, '
+    f'recite your verse, '
 
-    f'<strong>'
-    f'Su-śrotā speech recognition'
-    f'</strong>, '
+    f'review Su-śrotā’s transcription, '
 
-    f'real corpus-based '
-    f'continuation, and '
-
-    f'<strong>'
-    f'Vāgdhenu Sanskrit chant'
-    f'</strong>.'
-
-    f'</div>'
-
-
-    f'<div class="hero-chips">'
-
-    f'<div class="hero-chip">'
-    f'🎙️ Speak or type'
-    f'</div>'
-
-    f'<div class="hero-chip">'
-    f'🧠 Real game engine'
-    f'</div>'
-
-    f'<div class="hero-chip">'
-    f'📚 Corpus or open verse'
-    f'</div>'
-
-    f'<div class="hero-chip">'
-    f'🔊 Vāgdhenu chant'
-    f'</div>'
+    f'and submit it to keep '
+    f'the chain alive.'
 
     f'</div>'
 
@@ -1080,7 +1489,7 @@ if not available_corpora:
 with st.sidebar:
 
     st.header(
-        "⚙️ Game Settings"
+        "⚙️ Game Setup"
     )
 
 
@@ -1103,28 +1512,38 @@ with st.sidebar:
     )
 
 
-    rule_set = st.radio(
+    rule_label = (
+        st.selectbox(
 
-        "Rule Set",
+            "Continuation Rule",
 
-        [
-            RULE_SET_A,
-            RULE_SET_B,
-        ],
+            list(
+                RULE_LABELS.keys()
+            ),
 
-        horizontal=True,
+            help=(
 
-        help=(
-            "A: strict last-letter continuation. "
-            "B: strict first, then swara fallback "
-            "only if necessary."
-        ),
+                "Strict uses only the previous "
+                "verse's final playable अक्षर. "
+
+                "Swara Fallback uses that same "
+                "rule first, then a vowel fallback "
+                "only when needed."
+            ),
+        )
+    )
+
+
+    rule_set = (
+        RULE_LABELS[
+            rule_label
+        ]
     )
 
 
     verse_mode = st.radio(
 
-        "Verse Source",
+        "Allowed Verses",
 
         [
             VERSE_MODE_DATASET,
@@ -1132,37 +1551,44 @@ with st.sidebar:
         ],
 
         help=(
+
             "Allow Other Verses preserves "
-            "the original Vyoma open-verse setting."
+            "Vyoma's open mode: "
+
+            "an outside Sanskrit verse can "
+            "be accepted if it obeys the "
+            "required starting अक्षर."
         ),
     )
 
 
-    difficulty = st.selectbox(
+    difficulty = (
+        st.selectbox(
 
-        "Computer Difficulty",
+            "Computer Strategy",
 
-        [
-            DIFFICULTY_HARD,
-            DIFFICULTY_MEDIUM,
-            DIFFICULTY_EASY,
-        ],
+            DIFFICULTIES,
+        )
     )
 
 
     min_similarity = (
         st.slider(
 
-            "Verse match sensitivity",
+            "Recognition match tolerance",
 
             0.45,
+
             0.90,
+
             0.60,
+
             0.05,
 
             help=(
-                "Higher values require "
-                "a closer match to "
+
+                "Raise this only if you want "
+                "stricter matching against "
                 "the selected corpus."
             ),
         )
@@ -1173,89 +1599,8 @@ with st.sidebar:
 
 
     st.subheader(
-        "📊 Game Tally"
+        "🔊 Computer Voice"
     )
-
-
-    score1, score2 = (
-        st.columns(2)
-    )
-
-
-    score1.metric(
-
-        "Player Verses",
-
-        st.session_state
-        .player_score,
-    )
-
-
-    score2.metric(
-
-        "Computer Verses",
-
-        st.session_state
-        .computer_score,
-    )
-
-
-    chain_length = (
-
-        st.session_state
-        .player_score
-
-        +
-
-        st.session_state
-        .computer_score
-    )
-
-
-    st.metric(
-
-        "🔗 Chain Length",
-
-        chain_length,
-    )
-
-
-    chances_left = max(
-
-        0,
-
-        MAX_CHANCES
-        -
-        st.session_state
-        .chances_lost,
-    )
-
-
-    hearts = (
-
-        "❤️" * chances_left
-
-        +
-
-        "🖤"
-        *
-        st.session_state
-        .chances_lost
-    )
-
-
-    st.markdown(
-        f"**Chances:** {hearts}"
-    )
-
-
-    st.caption(
-        "Build the longest "
-        "verse chain you can."
-    )
-
-
-    st.divider()
 
 
     tts_ready = (
@@ -1266,17 +1611,11 @@ with st.sidebar:
     tts_enabled = (
         st.checkbox(
 
-            "🔊 Vāgdhenu computer chant",
+            "Use Vāgdhenu chant",
 
-            value=True,
+            value=tts_ready,
 
             disabled=not tts_ready,
-
-            help=(
-                "Uses the official public "
-                "Vāgdhenu Hugging Face "
-                "ZeroGPU demo."
-            ),
         )
     )
 
@@ -1286,12 +1625,19 @@ with st.sidebar:
         st.html(
 
             '<div '
-            'class="vagdhenu-note">'
+            'class="tts-note">'
 
-            'Vāgdhenu is connected. '
-            'The first chant may take '
-            '30–60 seconds while the '
-            'ZeroGPU model wakes up.'
+            'Connected through '
+
+            '<strong>'
+
+            f'{html.escape(tts_backend_name())}'
+
+            '</strong>. '
+
+            'A private Vāgdhenu endpoint '
+            'is preferred automatically '
+            'when configured.'
 
             '</div>'
         )
@@ -1301,11 +1647,8 @@ with st.sidebar:
 
         st.caption(
 
-            "Vāgdhenu client "
-            "is unavailable. "
-
-            "Gameplay still works "
-            "without TTS."
+            "Vāgdhenu is unavailable. "
+            "The text game still works normally."
         )
 
 
@@ -1314,7 +1657,7 @@ with st.sidebar:
 
     if st.button(
 
-        "🔄 Reset Game",
+        "🔄 New Game / Reset",
 
         use_container_width=True,
     ):
@@ -1329,6 +1672,7 @@ with st.sidebar:
 # ============================================================
 
 if (
+
     st.session_state.active_corpus
 
     and
@@ -1336,6 +1680,7 @@ if (
     st.session_state.active_corpus
     !=
     corpus_path
+
 ):
 
     reset_game()
@@ -1352,55 +1697,233 @@ engine = load_engine(
 
 
 # ============================================================
+# GAME STATUS
+# ============================================================
+
+chances_left = max(
+
+    0,
+
+    MAX_CHANCES
+    -
+    st.session_state.chances_lost,
+)
+
+
+hearts = (
+
+    "❤️"
+    *
+    chances_left
+
+    +
+
+    "🖤"
+    *
+    st.session_state.chances_lost
+)
+
+
+chain_length = (
+
+    st.session_state.player_score
+
+    +
+
+    st.session_state.computer_score
+)
+
+
+if (
+
+    st.session_state.free_start_allowed
+
+    or
+
+    not st.session_state.expected_letter
+
+):
+
+    required_display = (
+        "Any अक्षर"
+    )
+
+
+    required_sub = (
+        "Free start — choose any unused verse."
+    )
+
+
+else:
+
+    required_display = (
+        st.session_state.expected_letter
+    )
+
+
+    required_sub = (
+
+        "Your verse must begin with "
+
+        f"{st.session_state.expected_letter}."
+    )
+
+
+st.html(
+
+    '<div class="status-strip">'
+
+
+    '<div '
+    'class="status-card primary">'
+
+    '<div '
+    'class="status-kicker">'
+
+    'Your next move'
+
+    '</div>'
+
+    '<div '
+    'class="status-main">'
+
+    f'{html.escape(required_display)}'
+
+    '</div>'
+
+    '<div '
+    'class="status-sub">'
+
+    f'{html.escape(required_sub)}'
+
+    '</div>'
+
+    '</div>'
+
+
+    '<div '
+    'class="status-card">'
+
+    '<div '
+    'class="status-kicker">'
+
+    'Chances remaining'
+
+    '</div>'
+
+    '<div '
+    'class="status-main">'
+
+    f'{hearts}'
+
+    '</div>'
+
+    '<div '
+    'class="status-sub">'
+
+    f'{chances_left} '
+    f'of {MAX_CHANCES} remaining'
+
+    '</div>'
+
+    '</div>'
+
+
+    '<div '
+    'class="status-card">'
+
+    '<div '
+    'class="status-kicker">'
+
+    'Current chain'
+
+    '</div>'
+
+    '<div '
+    'class="status-main">'
+
+    f'{chain_length} verses'
+
+    '</div>'
+
+    '<div '
+    'class="status-sub">'
+
+    f'You {st.session_state.player_score}'
+    f' · '
+    f'Computer '
+    f'{st.session_state.computer_score}'
+
+    '</div>'
+
+    '</div>'
+
+
+    '</div>'
+)
+
+
+if (
+    st.session_state
+    .turn_feedback
+):
+
+    st.success(
+
+        st.session_state
+        .turn_feedback
+    )
+
+
+# ============================================================
 # GAME OVER
 # ============================================================
 
 if st.session_state.game_over:
 
-    final_chain = (
-
-        st.session_state
-        .player_score
-
-        +
-
-        st.session_state
-        .computer_score
-    )
-
-
     st.error(
+
         "Game Over — all 3 chances "
         "have been used."
     )
 
 
-    a, b, c = (
+    c1, c2, c3 = (
         st.columns(3)
     )
 
 
-    a.metric(
+    c1.metric(
+
         "Your Valid Verses",
-        st.session_state.player_score,
+
+        st.session_state
+        .player_score,
     )
 
 
-    b.metric(
+    c2.metric(
+
         "Computer Verses",
-        st.session_state.computer_score,
+
+        st.session_state
+        .computer_score,
     )
 
 
-    c.metric(
+    c3.metric(
+
         "Final Chain Length",
-        final_chain,
+
+        chain_length,
     )
 
 
     st.info(
-        "Reset the game to begin "
-        "a new Antyakshari chain."
+
+        "Press New Game / Reset "
+        "in the sidebar when you "
+        "want to start again."
     )
 
 
@@ -1412,8 +1935,8 @@ left_col, right_col = (
     st.columns(
 
         [
-            1.15,
-            0.85,
+            1.08,
+            0.92,
         ],
 
         gap="large",
@@ -1422,104 +1945,139 @@ left_col, right_col = (
 
 
 # ============================================================
-# PLAYER AREA
+# LEFT — PLAY
 # ============================================================
 
 with left_col:
 
 
-    if (
-        st.session_state
-        .free_start_allowed
-
-        or
-
-        not st.session_state
-        .expected_letter
-    ):
-
-        target_display = (
-            "स्वेच्छा"
+    previous_computer = (
+        last_move(
+            "Computer"
         )
-
-        target_note = (
-            "Free start — choose any "
-            "unused Sanskrit verse."
-        )
-
-
-    else:
-
-        target_display = (
-            st.session_state
-            .expected_letter
-        )
-
-        target_note = (
-
-            "Your next verse must "
-            "begin with "
-
-            f"{st.session_state.expected_letter}."
-        )
-
-
-    st.html(
-
-        f'<div class="target-card">'
-
-        f'<div class="target-label">'
-        f'Target starting अक्षर'
-        f'</div>'
-
-        f'<div class="target-akshara">'
-        f'{html.escape(target_display)}'
-        f'</div>'
-
-        f'<div class="target-note">'
-        f'{html.escape(target_note)}'
-        f'</div>'
-
-        f'</div>'
     )
 
 
-    with st.container(
-        border=True
+    previous_player = (
+        last_move(
+            "Player"
+        )
+    )
+
+
+    # --------------------------------------------------------
+    # LAST COMPUTER VERSE
+    # --------------------------------------------------------
+
+    if previous_computer:
+
+        st.html(
+
+            '<div '
+            'class="previous-card">'
+
+            '<div '
+            'class="previous-label">'
+
+            'Computer just played'
+
+            '</div>'
+
+            '<div '
+            'class="previous-text">'
+
+            f'{html.escape(str(previous_computer["text"]))}'
+
+            '</div>'
+
+            '</div>'
+        )
+
+
+    # --------------------------------------------------------
+    # YOUR PREVIOUS VERSE
+    # --------------------------------------------------------
+
+    if previous_player:
+
+        st.html(
+
+            '<div '
+            'class="previous-card">'
+
+            '<div '
+            'class="previous-label">'
+
+            'Your previous accepted verse'
+
+            '</div>'
+
+            '<div '
+            'class="previous-text">'
+
+            f'{html.escape(str(previous_player["text"]))}'
+
+            '</div>'
+
+            '</div>'
+        )
+
+
+    # --------------------------------------------------------
+    # STEP 1
+    # --------------------------------------------------------
+
+    st.html(
+
+        '<div '
+        'class="turn-header">'
+
+        '<div '
+        'class="turn-heading">'
+
+        '<span '
+        'class="step-badge">'
+
+        '1'
+
+        '</span>'
+
+        'Recite'
+
+        '</div>'
+
+        '<div '
+        'class="turn-help">'
+
+        'Press the microphone, '
+        'recite one Sanskrit verse, '
+        'then stop the recording. '
+
+        'Su-śrotā will transcribe '
+        'it automatically.'
+
+        '</div>'
+
+        '</div>'
+    )
+
+
+    if (
+        st.session_state
+        .pending_clear_input
     ):
 
+        st.session_state.verse_input = ""
 
-        st.subheader(
-            "🎤 Your Turn"
+        st.session_state.pending_clear_input = (
+            False
         )
 
 
-        st.caption(
+    audio_val = (
+        st.audio_input(
 
-            "Record a Sanskrit verse. "
-
-            "Su-śrotā will transcribe it, "
-
-            "and you can correct the text "
-            "before submitting."
-        )
-
-
-        if (
-            st.session_state
-            .pending_clear_input
-        ):
-
-            st.session_state.verse_input = ""
-
-            st.session_state.pending_clear_input = (
-                False
-            )
-
-
-        audio_val = st.audio_input(
-
-            "Record your Sanskrit verse",
+            "🎙️ Record your verse",
 
             disabled=(
                 st.session_state
@@ -1527,185 +2085,280 @@ with left_col:
             ),
 
             key=(
+
                 "audio_input_"
+
                 f"{st.session_state.audio_nonce}"
             ),
         )
+    )
 
 
-        # ----------------------------------------------------
-        # SPEECH RECOGNITION
-        # ----------------------------------------------------
+    # --------------------------------------------------------
+    # STT
+    # --------------------------------------------------------
+
+    if (
+
+        audio_val is not None
+
+        and
+
+        not st.session_state
+        .game_over
+
+    ):
+
+
+        audio_bytes = (
+            audio_val.getvalue()
+        )
+
+
+        digest = (
+            hashlib
+            .sha256(
+                audio_bytes
+            )
+            .hexdigest()
+        )
+
 
         if (
-            audio_val is not None
 
-            and
+            digest
 
-            not st.session_state.game_over
+            !=
+
+            st.session_state
+            .last_audio_digest
+
         ):
 
 
-            audio_bytes = (
-                audio_val.getvalue()
+            st.session_state.last_audio_digest = (
+                digest
             )
 
 
-            digest = (
-                hashlib
-                .sha256(
+            with tempfile.NamedTemporaryFile(
+
+                suffix=".wav",
+
+                delete=False,
+
+            ) as tmp:
+
+
+                tmp.write(
                     audio_bytes
                 )
-                .hexdigest()
-            )
 
 
-            if (
-                digest
-
-                !=
-
-                st.session_state
-                .last_audio_digest
-            ):
-
-
-                st.session_state.last_audio_digest = (
-                    digest
+                temp_path = (
+                    tmp.name
                 )
 
 
-                with tempfile.NamedTemporaryFile(
+            try:
 
-                    suffix=".wav",
 
-                    delete=False,
+                with st.spinner(
 
-                ) as tmp:
+                    "Su-śrotā is listening…"
+                ):
 
-                    tmp.write(
-                        audio_bytes
+
+                    recognized = (
+                        transcribe_audio(
+                            temp_path
+                        )
                     )
 
-                    temp_path = (
-                        tmp.name
+
+                if recognized:
+
+
+                    st.session_state.verse_input = (
+
+                        recognized.strip()
                     )
+
+
+                    st.session_state.last_error = ""
+
+
+                else:
+
+
+                    st.session_state.last_error = (
+
+                        "Su-śrotā could not "
+                        "transcribe this recording."
+                    )
+
+
+            finally:
 
 
                 try:
 
+                    os.remove(
+                        temp_path
+                    )
 
-                    with st.spinner(
+                except OSError:
 
-                        "Su-śrotā is transcribing "
-                        "your recitation…"
-                    ):
-
-                        recognized = (
-                            transcribe_audio(
-                                temp_path
-                            )
-                        )
+                    pass
 
 
-                    if recognized:
+    # --------------------------------------------------------
+    # STEP 2
+    # --------------------------------------------------------
+
+    st.html(
+
+        '<div '
+        'class="turn-header">'
+
+        '<div '
+        'class="turn-heading">'
+
+        '<span '
+        'class="step-badge">'
+
+        '2'
+
+        '</span>'
+
+        'Review'
+
+        '</div>'
+
+        '<div '
+        'class="turn-help">'
+
+        'Check the transcription below. '
+        'Correct any word before '
+        'you submit it.'
+
+        '</div>'
+
+        '</div>'
+    )
 
 
-                        st.session_state.verse_input = (
-                            recognized.strip()
-                        )
+    if (
+        st.session_state
+        .verse_input
+        .strip()
+    ):
 
+        st.html(
 
-                        st.session_state.last_error = ""
+            '<div '
+            'class="review-ready">'
 
+            '✓ Transcription is ready. '
 
-                        st.success(
+            'Review it below, then use '
+            'the blue Submit Verse button.'
 
-                            "Transcription ready. "
-
-                            "Review it, then press "
-                            "Play Verse."
-                        )
-
-
-                    else:
-
-
-                        st.session_state.last_error = (
-
-                            "Su-śrotā could not "
-                            "transcribe this recording."
-                        )
-
-
-                finally:
-
-
-                    try:
-
-                        os.remove(
-                            temp_path
-                        )
-
-                    except OSError:
-
-                        pass
-
-
-        st.text_area(
-
-            "Recognized / typed verse",
-
-            key="verse_input",
-
-            height=125,
-
-            placeholder=(
-
-                "The Su-śrotā transcription "
-                "will appear here, "
-
-                "or type/paste a "
-                "Sanskrit verse."
-            ),
-
-            disabled=(
-                st.session_state
-                .game_over
-            ),
+            '</div>'
         )
 
 
-        play_col, clear_col = (
-            st.columns(
-                [
-                    2,
-                    1,
-                ]
-            )
+    st.text_area(
+
+        "Your verse",
+
+        key="verse_input",
+
+        height=135,
+
+        placeholder=(
+
+            "Your Su-śrotā transcription "
+            "will appear here. "
+
+            "You can also type or paste "
+            "a verse."
+        ),
+
+        disabled=(
+            st.session_state
+            .game_over
+        ),
+    )
+
+
+    if (
+        st.session_state
+        .last_error
+    ):
+
+        st.warning(
+
+            st.session_state
+            .last_error
         )
 
 
-        submit_turn = (
-            play_col.button(
+    # --------------------------------------------------------
+    # STEP 3
+    # --------------------------------------------------------
 
-                "▶️ Play Verse",
+    st.html(
 
-                type="primary",
+        '<div '
+        'class="turn-header">'
 
-                use_container_width=True,
+        '<div '
+        'class="turn-heading">'
 
-                disabled=(
-                    st.session_state
-                    .game_over
-                ),
-            )
+        '<span '
+        'class="step-badge">'
+
+        '3'
+
+        '</span>'
+
+        'Submit'
+
+        '</div>'
+
+        '<div '
+        'class="turn-help">'
+
+        'When the verse is correct, '
+        'submit it. '
+
+        'A valid move is added to '
+        'the chain and the '
+        'computer replies.'
+
+        '</div>'
+
+        '</div>'
+    )
+
+
+    submit_col, clear_col = (
+        st.columns(
+            [
+                2.2,
+                1,
+            ]
         )
+    )
 
 
-        clear_col.button(
+    submit_turn = (
+        submit_col.button(
 
-            "Clear",
+            "✅ Submit Verse & Continue",
+
+            type="primary",
 
             use_container_width=True,
 
@@ -1713,545 +2366,637 @@ with left_col:
                 st.session_state
                 .game_over
             ),
+        )
+    )
 
-            on_click=clear_input,
+
+    clear_col.button(
+
+        "Clear / Re-record",
+
+        use_container_width=True,
+
+        disabled=(
+            st.session_state
+            .game_over
+        ),
+
+        on_click=clear_input,
+    )
+
+
+    # ========================================================
+    # SUBMIT TURN
+    # ========================================================
+
+    if (
+
+        submit_turn
+
+        and
+
+        not st.session_state
+        .game_over
+
+    ):
+
+
+        raw_user_text = (
+
+            st.session_state
+            .verse_input
+            .strip()
         )
 
 
-        if (
-            st.session_state
-            .last_error
-        ):
+        if not raw_user_text:
 
-            st.warning(
-                st.session_state
-                .last_error
+
+            st.session_state.last_error = (
+
+                "Record, type, or paste "
+                "a verse before submitting."
             )
 
 
-        # ====================================================
-        # PLAY TURN
-        # ====================================================
+            st.rerun()
+
+
+        (
+            matched_entry,
+            match_score,
+
+        ) = (
+            engine.match_verse(
+
+                raw_user_text,
+
+                min_similarity=float(
+                    min_similarity
+                ),
+            )
+        )
+
+
+        matched_in_dataset = (
+
+            matched_entry
+            is not None
+        )
+
+
+        # ----------------------------------------------------
+        # DATASET MODE
+        # ----------------------------------------------------
 
         if (
-            submit_turn
+
+            verse_mode
+            ==
+            VERSE_MODE_DATASET
 
             and
 
-            not st.session_state
-            .game_over
+            not matched_in_dataset
+
         ):
 
 
-            raw_user_text = (
+            penalize(
 
-                st.session_state
-                .verse_input
-                .strip()
+                "That recitation did not "
+                "match a verse in the "
+                "selected corpus closely enough."
             )
 
 
-            if not raw_user_text:
+            st.rerun()
 
-                st.error(
-                    "Record or type "
-                    "a verse first."
+
+        # ----------------------------------------------------
+        # DATASET VERSE
+        # ----------------------------------------------------
+
+        if matched_in_dataset:
+
+
+            player_text = (
+                matched_entry.verse
+            )
+
+
+            player_first = (
+                matched_entry.first_letter
+            )
+
+
+            player_last = (
+                matched_entry.last_letter
+            )
+
+
+            player_swara = (
+                matched_entry
+                .swara_after_last
+            )
+
+
+            player_reference = (
+                verse_reference(
+                    matched_entry
+                )
+            )
+
+
+            if (
+
+                matched_entry.verse_id
+
+                in
+
+                st.session_state.used_ids
+
+            ):
+
+
+                penalize(
+
+                    "That verse has "
+                    "already been used."
                 )
 
-                st.stop()
+
+                st.rerun()
+
+
+        # ----------------------------------------------------
+        # OPEN VERSE
+        # ----------------------------------------------------
+
+        else:
+
+
+            player_text = (
+                raw_user_text
+            )
+
+
+            normalized_custom = (
+
+                normalize_devanagari_text(
+                    player_text
+                )
+            )
+
+
+            if not normalized_custom:
+
+
+                penalize(
+
+                    "Could not detect usable "
+                    "Devanagari text in that verse."
+                )
+
+
+                st.rerun()
+
+
+            if (
+
+                normalized_custom
+
+                in
+
+                st.session_state
+                .used_custom_texts
+
+            ):
+
+
+                penalize(
+
+                    "That outside-dataset "
+                    "verse has already been used."
+                )
+
+
+                st.rerun()
+
+
+            player_first = (
+                infer_first_letter(
+                    player_text
+                )
+            )
 
 
             (
-                matched_entry,
-                match_score,
+                player_last,
+                player_swara,
 
             ) = (
-                engine
-                .match_verse(
-
-                    raw_user_text,
-
-                    min_similarity=float(
-                        min_similarity
-                    ),
+                infer_last_letter_and_swara(
+                    player_text
                 )
             )
 
 
-            matched_in_dataset = (
-
-                matched_entry
-                is not None
+            player_reference = (
+                "Outside selected corpus"
             )
 
 
-            # -----------------------------------------------
-            # DATASET MODE
-            # -----------------------------------------------
-
             if (
-                verse_mode
-                ==
-                VERSE_MODE_DATASET
 
-                and
+                not player_first
 
-                not matched_in_dataset
+                or
+
+                not player_last
+
             ):
+
 
                 penalize(
 
-                    "That recitation did not "
-                    "match a verse in the "
-                    "selected corpus closely enough."
+                    "Could not determine "
+                    "the starting or ending अक्षर."
                 )
+
 
                 st.rerun()
 
 
-            # -----------------------------------------------
-            # MATCHED VERSE
-            # -----------------------------------------------
+        # ----------------------------------------------------
+        # CHECK REQUIRED LETTER
+        # ----------------------------------------------------
 
-            if matched_in_dataset:
+        if (
 
+            not st.session_state
+            .free_start_allowed
 
-                player_text = (
-                    matched_entry.verse
-                )
+            and
 
-                player_first = (
-                    matched_entry.first_letter
-                )
+            st.session_state
+            .expected_letter
 
-                player_last = (
-                    matched_entry.last_letter
-                )
+            and
 
-                player_swara = (
-                    matched_entry
-                    .swara_after_last
-                )
+            player_first
+            !=
+            st.session_state
+            .expected_letter
 
-                player_reference = (
-                    verse_reference(
-                        matched_entry
-                    )
-                )
+        ):
 
 
-                if (
-                    matched_entry.verse_id
+            penalize(
 
-                    in
+                "Wrong starting अक्षर. "
 
-                    st.session_state
-                    .used_ids
-                ):
+                f"This turn required "
+                f"{st.session_state.expected_letter}, "
 
-                    penalize(
-                        "That verse has "
-                        "already been used."
-                    )
-
-                    st.rerun()
+                f"but the submitted verse "
+                f"begins with {player_first}."
+            )
 
 
-            # -----------------------------------------------
-            # OPEN VERSE MODE
-            # -----------------------------------------------
-
-            else:
+            st.rerun()
 
 
-                player_text = (
+        # ----------------------------------------------------
+        # MARK PLAYER VERSE USED
+        # ----------------------------------------------------
+
+        if matched_in_dataset:
+
+
+            st.session_state.used_ids.add(
+                matched_entry.verse_id
+            )
+
+
+            correction_note = ""
+
+
+            if (
+
+                normalize_devanagari_text(
                     raw_user_text
                 )
 
-
-                normalized_custom = (
-                    normalize_devanagari_text(
-                        player_text
-                    )
-                )
-
-
-                if not normalized_custom:
-
-                    penalize(
-
-                        "Could not detect usable "
-                        "Devanagari text in that verse."
-                    )
-
-                    st.rerun()
-
-
-                if (
-                    normalized_custom
-
-                    in
-
-                    st.session_state
-                    .used_custom_texts
-                ):
-
-                    penalize(
-
-                        "That outside-dataset "
-                        "verse has already been used."
-                    )
-
-                    st.rerun()
-
-
-                player_first = (
-                    infer_first_letter(
-                        player_text
-                    )
-                )
-
-
-                (
-                    player_last,
-                    player_swara,
-
-                ) = (
-                    infer_last_letter_and_swara(
-                        player_text
-                    )
-                )
-
-
-                player_reference = (
-                    "Outside selected corpus"
-                )
-
-
-                if (
-                    not player_first
-
-                    or
-
-                    not player_last
-                ):
-
-                    penalize(
-
-                        "Could not determine the "
-                        "starting or ending अक्षर."
-                    )
-
-                    st.rerun()
-
-
-            # -----------------------------------------------
-            # REQUIRED STARTING AKSHARA
-            # -----------------------------------------------
-
-            if (
-                not st.session_state
-                .free_start_allowed
-
-                and
-
-                st.session_state
-                .expected_letter
-
-                and
-
-                player_first
                 !=
-                st.session_state
-                .expected_letter
+
+                normalize_devanagari_text(
+                    player_text
+                )
+
             ):
-
-                penalize(
-
-                    "Invalid continuation. "
-
-                    f"Your verse must begin with "
-                    f"{st.session_state.expected_letter}, "
-
-                    f"not {player_first}."
-                )
-
-                st.rerun()
-
-
-            # -----------------------------------------------
-            # MARK USED
-            # -----------------------------------------------
-
-            if matched_in_dataset:
-
-
-                st.session_state.used_ids.add(
-                    matched_entry.verse_id
-                )
-
-
-                correction_note = ""
-
-
-                if (
-                    normalize_devanagari_text(
-                        raw_user_text
-                    )
-
-                    !=
-
-                    normalize_devanagari_text(
-                        player_text
-                    )
-                ):
-
-                    correction_note = (
-
-                        "Matched corpus verse "
-
-                        f"({match_score:.0%})."
-                    )
-
-
-            else:
-
-
-                st.session_state.used_custom_texts.add(
-
-                    normalize_devanagari_text(
-                        player_text
-                    )
-                )
 
 
                 correction_note = (
 
-                    "Accepted via "
-                    "Allow Other Verses."
+                    "Matched corpus verse "
+                    f"({match_score:.0%})."
                 )
 
 
-            # -----------------------------------------------
-            # PLAYER TALLY
-            # -----------------------------------------------
+        else:
 
-            st.session_state.player_score += 1
 
-            st.session_state.last_error = ""
+            st.session_state.used_custom_texts.add(
+
+                normalize_devanagari_text(
+                    player_text
+                )
+            )
+
+
+            correction_note = (
+
+                "Accepted through "
+                "Allow Other Verses."
+            )
+
+
+        old_required = (
+
+            st.session_state
+            .expected_letter
+
+            or ""
+        )
+
+
+        st.session_state.player_score += 1
+
+
+        st.session_state.last_error = ""
+
+
+        log_move(
+
+            "Player",
+
+            player_text,
+
+            reference=(
+                player_reference
+            ),
+
+            note=(
+                correction_note
+            ),
+
+            required_letter=(
+                old_required
+            ),
+        )
+
+
+        # ----------------------------------------------------
+        # COMPUTER RESPONSE
+        # ----------------------------------------------------
+
+        response = (
+            engine
+            .choose_response_for_end(
+
+                player_last,
+
+                player_swara,
+
+                st.session_state.used_ids,
+
+                rule_set=(
+                    rule_set
+                ),
+
+                difficulty=(
+                    difficulty
+                ),
+            )
+        )
+
+
+        bot_entry = (
+            response[
+                "bot_entry"
+            ]
+        )
+
+
+        # ----------------------------------------------------
+        # COMPUTER HAS NO VERSE
+        # ----------------------------------------------------
+
+        if bot_entry is None:
+
+
+            st.session_state.expected_letter = (
+                None
+            )
+
+
+            st.session_state.free_start_allowed = (
+                True
+            )
+
+
+            cleanup_last_tts()
+
+
+            st.session_state.last_tts_path = ""
+
+
+            st.session_state.last_tts_error = ""
+
+
+            st.session_state.turn_feedback = (
+
+                "✓ Your verse was accepted. "
+
+                "The computer has no continuation, "
+                "so your next turn is a free start."
+            )
 
 
             log_move(
 
-                "Player",
+                "System",
 
-                player_text,
+                (
+                    "The computer has no unused "
+                    "continuation in this corpus. "
+                    "Free start is enabled."
+                ),
+
+                note=str(
+                    response[
+                        "rule_applied"
+                    ]
+                ),
+            )
+
+
+        # ----------------------------------------------------
+        # COMPUTER PLAYS
+        # ----------------------------------------------------
+
+        else:
+
+
+            st.session_state.used_ids.add(
+                bot_entry.verse_id
+            )
+
+
+            st.session_state.computer_score += 1
+
+
+            log_move(
+
+                "Computer",
+
+                bot_entry.verse,
 
                 reference=(
-                    player_reference
+                    verse_reference(
+                        bot_entry
+                    )
                 ),
 
-                note=(
-                    correction_note
+                note=str(
+                    response[
+                        "rule_applied"
+                    ]
                 ),
 
-                required_letter=(
+                required_letter=str(
 
-                    st.session_state
-                    .expected_letter
+                    response[
+                        "required_letter"
+                    ]
 
                     or ""
                 ),
             )
 
 
-            # -----------------------------------------------
-            # COMPUTER TURN
-            # -----------------------------------------------
+            update_requirement(
 
-            response = (
-                engine
-                .choose_response_for_end(
+                engine,
 
-                    player_last,
+                bot_entry,
 
-                    player_swara,
-
-                    st.session_state
-                    .used_ids,
-
-                    rule_set=rule_set,
-
-                    difficulty=difficulty,
-                )
+                rule_set,
             )
 
 
-            bot_entry = (
-                response[
-                    "bot_entry"
-                ]
-            )
+            if (
+
+                st.session_state
+                .free_start_allowed
+
+                or
+
+                not st.session_state
+                .expected_letter
+
+            ):
 
 
-            # -----------------------------------------------
-            # NO RESPONSE
-            # -----------------------------------------------
-
-            if bot_entry is None:
-
-
-                st.session_state.expected_letter = (
-                    None
+                next_text = (
+                    "free start"
                 )
 
-
-                st.session_state.free_start_allowed = (
-                    True
-                )
-
-
-                st.session_state.last_tts_path = ""
-
-
-                st.session_state.last_tts_error = ""
-
-
-                log_move(
-
-                    "System",
-
-                    (
-                        "The computer has no "
-                        "unused continuation "
-                        "in this corpus. "
-                        "Free start is enabled."
-                    ),
-
-                    note=str(
-                        response[
-                            "rule_applied"
-                        ]
-                    ),
-                )
-
-
-            # -----------------------------------------------
-            # COMPUTER VERSE
-            # -----------------------------------------------
 
             else:
 
 
-                st.session_state.used_ids.add(
-                    bot_entry.verse_id
+                next_text = (
+
+                    st.session_state
+                    .expected_letter
                 )
 
 
-                st.session_state.computer_score += 1
+            st.session_state.turn_feedback = (
 
+                "✓ Verse accepted. "
+                "The computer replied. "
 
-                log_move(
+                "Your next required अक्षर is "
 
-                    "Computer",
-
-                    bot_entry.verse,
-
-                    reference=(
-                        verse_reference(
-                            bot_entry
-                        )
-                    ),
-
-                    note=str(
-                        response[
-                            "rule_applied"
-                        ]
-                    ),
-
-                    required_letter=str(
-
-                        response[
-                            "required_letter"
-                        ]
-
-                        or ""
-                    ),
-                )
-
-
-                update_requirement(
-
-                    engine,
-
-                    bot_entry,
-
-                    rule_set,
-                )
-
-
-                # -------------------------------------------
-                # VAGDHENU
-                # -------------------------------------------
-
-                if tts_enabled:
-
-
-                    with st.spinner(
-
-                        "Vāgdhenu is chanting "
-                        "the computer's verse…"
-                    ):
-
-
-                        audio_path = (
-                            generate_speech(
-
-                                bot_entry.verse,
-
-                                "computer_response.wav",
-                            )
-                        )
-
-
-                    st.session_state.last_tts_path = (
-
-                        audio_path
-                        or ""
-                    )
-
-
-                    st.session_state.last_tts_error = (
-
-                        get_last_tts_error()
-                    )
-
-
-                else:
-
-
-                    st.session_state.last_tts_path = ""
-
-
-                    st.session_state.last_tts_error = ""
-
-
-            # -----------------------------------------------
-            # NEXT ROUND
-            # -----------------------------------------------
-
-            st.session_state.pending_clear_input = (
-                True
+                f"{next_text}."
             )
 
 
-            st.session_state.last_audio_digest = ""
+            # ------------------------------------------------
+            # VAGDHENU
+            # ------------------------------------------------
+
+            cleanup_last_tts()
 
 
-            st.session_state.audio_nonce += 1
+            st.session_state.last_tts_path = ""
 
 
-            st.rerun()
+            st.session_state.last_tts_error = ""
+
+
+            if tts_enabled:
+
+
+                with st.spinner(
+
+                    "Vāgdhenu is generating "
+                    "the computer's chant…"
+                ):
+
+
+                    audio_path = (
+                        generate_speech(
+
+                            bot_entry.verse,
+
+                            tts_output_path(),
+                        )
+                    )
+
+
+                st.session_state.last_tts_path = (
+
+                    audio_path
+                    or ""
+                )
+
+
+                st.session_state.last_tts_error = (
+
+                    get_last_tts_error()
+                )
+
+
+        # ----------------------------------------------------
+        # PREPARE NEXT TURN
+        # ----------------------------------------------------
+
+        st.session_state.pending_clear_input = (
+            True
+        )
+
+
+        st.session_state.last_audio_digest = ""
+
+
+        st.session_state.audio_nonce += 1
+
+
+        st.rerun()
 
 
     # ========================================================
@@ -2259,8 +3004,8 @@ with left_col:
     # ========================================================
 
     if (
-        st.session_state
-        .last_tts_path
+
+        st.session_state.last_tts_path
 
         and
 
@@ -2268,6 +3013,7 @@ with left_col:
             st.session_state
             .last_tts_path
         )
+
     ):
 
 
@@ -2292,23 +3038,23 @@ with left_col:
 
             st.caption(
 
-                "Generated by "
-                "Vāgdhenu Sanskrit Chant TTS."
+                "Generated through "
+                f"{tts_backend_name()}."
             )
 
 
     elif (
+
         st.session_state
         .last_tts_error
+
     ):
 
 
         st.warning(
 
             "The computer move was valid, "
-
-            "but Vāgdhenu audio could "
-            "not be generated: "
+            "but Vāgdhenu audio failed: "
 
             +
 
@@ -2318,7 +3064,7 @@ with left_col:
 
 
 # ============================================================
-# HISTORY PANEL
+# RIGHT — HISTORY
 # ============================================================
 
 with right_col:
@@ -2332,46 +3078,51 @@ with right_col:
         st.html(
 
             '<div '
-            'class="history-heading">'
+            'class="timeline-heading">'
 
-            '📜 Game History'
+            '📜 Verse Chain'
 
             '</div>'
+        )
+
+
+        st.caption(
+
+            "Everything accepted so far, "
+            "in the order it happened."
         )
 
 
         render_history()
 
 
-        with st.expander(
-            "How the rules work"
-        ):
+    # --------------------------------------------------------
+    # RULE HELP
+    # --------------------------------------------------------
+
+    with st.expander(
+        "Rules & modes"
+    ):
 
 
-            st.markdown(
-                f"""
-**Rule A — Strict**  
-The next verse must begin with the last playable अक्षर of the previous verse.
+        st.markdown(
+            f"""
+**Strict — last अक्षर only**  
+The next verse must begin with the previous verse's last playable अक्षर.
 
-**Rule B — Swara fallback**  
-Strict continuation is tried first. If the selected corpus has no strict continuation, the recorded **Swara After Last** is used.
+**Swara Fallback**  
+The game uses the same strict rule first. Only when no strict continuation exists does it try the recorded **Swara After Last**.
 
 **{VERSE_MODE_DATASET}**  
-Your recitation must match a verse in the selected corpus.
+Your verse must match the selected corpus.
 
 **{VERSE_MODE_OPEN}**  
-This preserves the original Vyoma open-Antyakshari setting. You may recite another Sanskrit verse outside the selected corpus; the app checks its starting अक्षर and infers its ending अक्षर.
-
-**No repeats**  
-Used verses cannot be repeated.
+Preserves the original Vyoma open setting. A Sanskrit verse outside the selected corpus may be accepted if it follows the required starting अक्षर.
 
 **Chances**  
-You have **{MAX_CHANCES} chances**. Invalid moves consume one chance.
-
-**Goal**  
-Keep the Antyakshari chain alive for as long as possible.
-                """
-            )
+You have **{MAX_CHANCES} chances**. A wrong starting अक्षर, repeated verse, or invalid submission uses one chance.
+"""
+        )
 
 
 # ============================================================
@@ -2380,7 +3131,8 @@ Keep the Antyakshari chain alive for as long as possible.
 
 st.html(
 
-    f'<div class="footer-credit">'
+    f'<div '
+    f'class="footer-credit">'
 
     f'<img '
     f'src="{VYOMA_LOGO_URL}" '
@@ -2395,12 +3147,10 @@ st.html(
     f'Vyoma Linguistic Labs '
     f'Antyakshari-Krida'
 
-    f'</a> '
+    f'</a> project · '
 
-    f'project · enhanced with '
-
-    f'Su-śrotā ASR and '
-    f'Vāgdhenu chant.'
+    f'Su-śrotā ASR · '
+    f'Vāgdhenu Sanskrit chant.'
 
     f'</div>'
 )
