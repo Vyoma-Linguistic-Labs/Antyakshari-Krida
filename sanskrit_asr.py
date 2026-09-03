@@ -24,12 +24,27 @@ def _load_model():
         return _MODEL
 
     try:
-        print("Su-srota: downloading/checking model...", flush=True)
-
-        model_path = hf_hub_download(
-            repo_id=MODEL_REPO,
-            filename=MODEL_FILE
+        local_model = os.environ.get(
+            "SUSHROTA_MODEL_PATH",
+            "models/sushrota/sushrota_sanskrit_asr_v5.nemo"
         )
+
+        if os.path.exists(local_model):
+            model_path = local_model
+            print(
+                "Su-srota: using LOCAL model",
+                flush=True
+            )
+        else:
+            print(
+                "Su-srota: downloading/checking model...",
+                flush=True
+            )
+
+            model_path = hf_hub_download(
+                repo_id=MODEL_REPO,
+                filename=MODEL_FILE
+            )
 
         print(
             f"Su-srota: model checkpoint = {model_path}",
@@ -41,11 +56,17 @@ def _load_model():
                 f"Downloaded model not found: {model_path}"
             )
 
-        print("Su-srota: importing NeMo...", flush=True)
+        print(
+            "Su-srota: importing NeMo...",
+            flush=True
+        )
 
         import nemo.collections.asr as nemo_asr
 
-        print("Su-srota: restoring .nemo checkpoint...", flush=True)
+        print(
+            "Su-srota: restoring .nemo checkpoint...",
+            flush=True
+        )
 
         _MODEL = (
             nemo_asr.models.EncDecHybridRNNTCTCBPEModel
