@@ -70,7 +70,7 @@ def _load_model():
 
         _MODEL = (
             nemo_asr.models.EncDecHybridRNNTCTCBPEModel
-            .restore_from(model_path)
+            .restore_from(model_path, map_location=torch.device("cpu"))
         )
 
         _MODEL.eval()
@@ -212,6 +212,23 @@ def _decode_sanskrit(model, wav):
 
 
 def transcribe_audio(audio_file_path: str) -> str:
+
+    # A separate runtime keeps NeMo's older dependencies out of the UI environment.
+    api_url = os.environ.get("SUSHROTA_API_URL", "").strip()
+    if api_url:
+        import requests
+        try:
+            with open(audio_file_path, "rb") as audio:
+                response = requests.post(
+                    api_url.rstrip("/") + "/transcribe",
+                    files={"audio": ("recording.wav", audio, "audio/wav")},
+                    timeout=(10, 600),
+                )
+            response.raise_for_status()
+            return response.json()["text"]
+        except (OSError, requests.RequestException, ValueError, KeyError) as exc:
+            print(f"Su-srota local service error: {exc}", flush=True)
+            return ""
 
     print(
         f"Su-srota: received {audio_file_path}",

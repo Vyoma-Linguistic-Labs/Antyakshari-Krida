@@ -2,21 +2,16 @@
 
 ## Run locally
 
-1. Install dependencies:
+For the configured Mac installation, start both the game and the local speech service:
+
 ```bash
-pip install -r requirements_streamlit_game.txt
+conda activate Vyoma
+python start_local.py
 ```
-2. Keep the corpus CSVs in this folder (`BG_info.csv`, `Narayaneeyam_info.csv`, or `BG_Nar_Info.csv`).
-3. (Optional for ASR mode) Place `model_200_fixed.pth` in this folder.
-4. (Optional for computer voice) add YourVoic key in `.streamlit/secrets.toml`:
-```toml
-[yourvoic]
-api_key = "YOUR_KEY_HERE"
-```
-5. Start app:
-```bash
-streamlit run streamlit_antyakshari_game.py
-```
+
+Open http://localhost:8501. See [RUN_LOCAL.md](RUN_LOCAL.md) for environment,
+model, and troubleshooting details. The current app uses Su-śrotā and Vāgdhenu;
+the older `model_200_fixed.pth` and YourVoic API key are not used.
 
 ## Features
 
@@ -29,9 +24,9 @@ streamlit run streamlit_antyakshari_game.py
 - Practice mode:
   - suggest up to 3 valid next verses when the player needs help.
 - Computer recitation (TTS):
-  - optional YourVoic TTS integration for computer verses.
-  - uses `hi-IN` language setting for Sanskrit-style recitation.
-  - set `TTS Voice ID` in the sidebar.
+  - optional Vāgdhenu Sanskrit chant for computer verses.
+  - the local launcher connects to the speech server on port 8001.
+  - enable or disable `Use Vāgdhenu chant` in the sidebar.
 - Verse source modes:
   - `Within Dataset Only`: player verse must match a corpus verse (with selected sensitivity).
   - `Allow Other Verses`: player may use non-dataset verses too.

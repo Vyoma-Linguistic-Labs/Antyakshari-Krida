@@ -3,3 +3,6 @@
 __pycache__/
 models/
 *.backup
+.speech-env/
+vendor/
+.runtime/

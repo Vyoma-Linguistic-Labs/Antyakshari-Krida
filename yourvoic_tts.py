@@ -303,7 +303,7 @@ def _generate_from_local(
 
         timeout=(
             15,
-            240,
+            1200,
         ),
     )
 

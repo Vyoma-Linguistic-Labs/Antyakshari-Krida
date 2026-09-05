@@ -68,7 +68,7 @@ st.set_page_config(
     page_title="Sanskrit Antyakshari Krida",
     page_icon="🕉️",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 # ============================================================
@@ -85,7 +85,7 @@ st.html(
     --ink: #102A43;
     --muted: #66788A;
     --line: #DCE7F1;
-    --soft: #F5F8FC;
+    --soft: #F7F9FC;
 }
 
 .stApp {
@@ -93,9 +93,9 @@ st.html(
 }
 
 .block-container {
-    max-width: 1320px;
-    padding-top: 3.3rem;
-    padding-bottom: 3rem;
+    max-width: 1180px;
+    padding-top: 4rem;
+    padding-bottom: 2.5rem;
 }
 
 /* SIDEBAR */
@@ -116,82 +116,73 @@ st.html(
     color: #C8D6E5 !important;
 }
 
-/* HERO */
-.hero-card {
-    background: linear-gradient(
-        135deg,
-        #083C6D 0%,
-        #0B5FA5 62%,
-        #1677BC 100%
-    );
-    border-radius: 22px;
-    border-bottom: 5px solid var(--gold);
-    box-shadow: 0 14px 32px rgba(8,60,109,.18);
-    padding: 27px 29px 25px;
-    margin-bottom: 18px;
-    color: white;
-    position: relative;
+[data-testid="stAppDeployButton"] {
+    display: none;
 }
 
-.hero-title {
-    font-size: 2.1rem;
+[data-testid="stHeader"] {
+    background: rgba(247,249,252,.92);
+}
+
+/* APP HEADER */
+.app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 16px;
+}
+
+.app-title {
+    color: var(--vyoma-dark);
+    font-size: 1.65rem;
     line-height: 1.22;
     font-weight: 850;
-    color: white;
 }
 
-.hero-subtitle {
-    margin-top: 8px;
-    color: #E5F1FB;
-    font-size: .98rem;
-    line-height: 1.55;
-    max-width: 850px;
+.app-subtitle {
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: .88rem;
 }
 
-.hero-badge {
-    position: absolute;
-    right: 17px;
-    top: 15px;
+.brand-mark {
     display: flex;
     align-items: center;
     gap: 7px;
-    background: rgba(255,255,255,.14);
-    border: 1px solid rgba(255,255,255,.16);
+    background: white;
+    border: 1px solid var(--line);
     border-radius: 999px;
-    padding: 6px 10px;
-    color: white;
-    font-size: .72rem;
+    padding: 6px 11px 6px 7px;
+    color: var(--muted);
+    font-size: .74rem;
+    white-space: nowrap;
 }
 
-.hero-badge img {
-    width: 23px;
-    height: 23px;
+.brand-mark img {
+    width: 25px;
+    height: 25px;
     border-radius: 50%;
 }
 
 /* GAME STATUS */
 .status-strip {
     display: grid;
-    grid-template-columns: minmax(260px, 1.8fr) 1fr 1fr;
-    gap: 12px;
-    margin: 0 0 18px;
+    grid-template-columns: minmax(280px, 2fr) 1fr 1fr;
+    gap: 10px;
+    margin: 0 0 14px;
 }
 
 .status-card {
     background: white;
     border: 1px solid var(--line);
-    border-radius: 15px;
-    padding: 13px 16px;
-    box-shadow: 0 5px 16px rgba(16,42,67,.05);
+    border-radius: 14px;
+    padding: 12px 15px;
 }
 
 .status-card.primary {
-    background: linear-gradient(
-        135deg,
-        #EAF4FF 0%,
-        #F8FBFF 100%
-    );
-    border-color: #BDD8F1;
+    background: var(--vyoma-dark);
+    border-color: var(--vyoma-dark);
 }
 
 .status-kicker {
@@ -210,49 +201,55 @@ st.html(
     line-height: 1.2;
 }
 
+.status-card.primary .status-kicker,
+.status-card.primary .status-sub {
+    color: #C9DDEF;
+}
+
+.status-card.primary .status-main {
+    color: white;
+    font-size: 1.62rem;
+}
+
 .status-sub {
     color: var(--muted);
     font-size: .76rem;
     margin-top: 3px;
 }
 
-/* TURN FLOW */
-.turn-header {
-    background: white;
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    padding: 13px 15px;
-    margin: 8px 0 10px;
-    box-shadow: 0 5px 16px rgba(16,42,67,.04);
+/* PLAY SURFACE */
+.section-heading {
+    color: var(--ink);
+    font-size: 1.28rem;
+    font-weight: 850;
+    margin-bottom: 2px;
 }
 
-.turn-heading {
+.section-help {
+    color: var(--muted);
+    font-size: .84rem;
+    line-height: 1.45;
+    margin-bottom: 12px;
+}
+
+.input-divider {
     display: flex;
     align-items: center;
-    gap: 9px;
-    color: var(--ink);
-    font-size: 1.15rem;
-    font-weight: 850;
+    gap: 10px;
+    color: #8796A5;
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    margin: 10px 0 4px;
 }
 
-.step-badge {
-    width: 28px;
-    height: 28px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    background: var(--vyoma);
-    color: white;
-    font-size: .82rem;
-    font-weight: 850;
-}
-
-.turn-help {
-    color: var(--muted);
-    font-size: .8rem;
-    margin-top: 5px;
-    line-height: 1.45;
+.input-divider::before,
+.input-divider::after {
+    content: "";
+    height: 1px;
+    background: var(--line);
+    flex: 1;
 }
 
 .review-ready {
@@ -269,11 +266,11 @@ st.html(
 
 /* PREVIOUS VERSES */
 .previous-card {
-    background: #F8FBFE;
-    border: 1px solid #DCE7F1;
+    background: #FFF9ED;
+    border: 1px solid #F1DCAD;
     border-radius: 13px;
     padding: 11px 13px;
-    margin-bottom: 10px;
+    margin: 10px 0 16px;
 }
 
 .previous-label {
@@ -296,7 +293,7 @@ st.html(
     color: var(--ink);
     font-size: 1.35rem;
     font-weight: 850;
-    margin: 1px 0 11px;
+    margin: 1px 0 3px;
 }
 
 .move-card {
@@ -305,7 +302,6 @@ st.html(
     border-radius: 13px;
     padding: 12px 13px;
     margin-bottom: 10px;
-    box-shadow: 0 4px 12px rgba(16,42,67,.04);
 }
 
 .move-player {
@@ -377,8 +373,27 @@ st.html(
     min-height: 2.65rem;
 }
 
+.stButton > button[kind="primary"] {
+    background: var(--vyoma) !important;
+    border-color: var(--vyoma) !important;
+    color: white !important;
+}
+
+.stButton > button[kind="primary"]:hover {
+    background: var(--vyoma-dark) !important;
+    border-color: var(--vyoma-dark) !important;
+}
+
 .stTextArea textarea {
     border-radius: 12px !important;
+    font-size: 1rem !important;
+    line-height: 1.6 !important;
+}
+
+[data-testid="stVerticalBlockBorderWrapper"] {
+    background: white;
+    border-color: var(--line) !important;
+    border-radius: 16px !important;
 }
 
 div[data-testid="stMetric"] {
@@ -392,10 +407,14 @@ div[data-testid="stMetric"] {
         grid-template-columns: 1fr;
     }
 
-    .hero-badge {
-        position: static;
-        width: fit-content;
-        margin-bottom: 10px;
+    .app-header {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .brand-mark {
+        display: none;
     }
 }
 </style>
@@ -530,14 +549,11 @@ def last_move(speaker: str):
 
 def render_history() -> None:
     if not st.session_state.history:
-        st.info(
-            "Your verse chain will appear here "
-            "as soon as you submit the first verse."
-        )
+        st.caption("Your accepted verses and computer replies will appear here.")
         return
 
     visible_turn = 0
-
+    labelled_moves = []
     for move in st.session_state.history:
         speaker = move["speaker"]
 
@@ -553,6 +569,10 @@ def render_history() -> None:
         else:
             css_class = "move-system"
             label = "ℹ️ Game"
+
+        labelled_moves.append((move, css_class, label))
+
+    for move, css_class, label in reversed(labelled_moves):
 
         meta = []
 
@@ -633,26 +653,15 @@ def tts_output_path() -> str:
 
 
 # ============================================================
-# HERO
+# APP HEADER
 # ============================================================
 
 st.html(
-    f'<div class="hero-card">'
-    f'<div class="hero-badge">'
-    f'<img src="{VYOMA_LOGO_URL}" alt="Vyoma">'
-    f"<span>Vyoma Linguistic Labs</span>"
-    f"</div>"
-    f'<div class="hero-title">'
-    f"🕉️ संस्कृत-अन्त्याक्षरी क्रीडा"
-    f"</div>"
-    f'<div class="hero-subtitle">'
-    f"Listen to the computer, "
-    f"follow the required अक्षर, "
-    f"recite your verse, "
-    f"review Su-śrotā’s transcription, "
-    f"and submit it to keep "
-    f"the chain alive."
-    f"</div>"
+    f'<div class="app-header">'
+    f'<div><div class="app-title">🕉️ संस्कृत-अन्त्याक्षरी</div>'
+    f'<div class="app-subtitle">Listen, continue, and keep the verse chain alive.</div></div>'
+    f'<div class="brand-mark"><img src="{VYOMA_LOGO_URL}" alt="Vyoma">'
+    f"<span>Vyoma Linguistic Labs</span></div>"
     f"</div>"
 )
 
@@ -671,7 +680,8 @@ if not available_corpora:
 # ============================================================
 
 with st.sidebar:
-    st.header("⚙️ Game Setup")
+    st.title("Game options")
+    st.caption("Changes to the corpus start a new game.")
 
     corpus_label = st.selectbox(
         "Corpus",
@@ -680,22 +690,8 @@ with st.sidebar:
 
     corpus_path = available_corpora[corpus_label]
 
-    rule_label = st.selectbox(
-        "Continuation Rule",
-        list(RULE_LABELS.keys()),
-        help=(
-            "Strict uses only the previous "
-            "verse's final playable अक्षर. "
-            "Swara Fallback uses that same "
-            "rule first, then a vowel fallback "
-            "only when needed."
-        ),
-    )
-
-    rule_set = RULE_LABELS[rule_label]
-
     verse_mode = st.radio(
-        "Allowed Verses",
+        "Your verses",
         [
             VERSE_MODE_DATASET,
             VERSE_MODE_OPEN,
@@ -709,58 +705,49 @@ with st.sidebar:
         ),
     )
 
-    difficulty = st.selectbox(
-        "Computer Strategy",
-        DIFFICULTIES,
-    )
-
-    min_similarity = st.slider(
-        "Recognition match tolerance",
-        0.45,
-        0.90,
-        0.60,
-        0.05,
-        help=(
-            "Raise this only if you want "
-            "stricter matching against "
-            "the selected corpus."
-        ),
-    )
-
-    st.divider()
-
-    st.subheader("🔊 Computer Voice")
-
     tts_ready = tts_available()
 
     tts_enabled = st.checkbox(
-        "Use Vāgdhenu chant",
-        value=tts_ready,
+        "Play the computer’s chant",
+        value=False,
         disabled=not tts_ready,
     )
 
     if tts_ready:
-        st.html(
-            '<div class="tts-note">'
-            "Connected through "
-            "<strong>"
-            f"{html.escape(tts_backend_name())}"
-            "</strong>. "
-            "A private Vāgdhenu endpoint "
-            "is preferred automatically "
-            "when configured."
-            "</div>"
-        )
+        st.caption(f"Voice: {tts_backend_name()}. Local generation can take a minute.")
     else:
-        st.caption(
-            "Vāgdhenu is unavailable. "
-            "The text game still works normally."
+        st.caption("Computer voice is unavailable.")
+
+    with st.expander("Advanced rules"):
+        rule_label = st.selectbox(
+            "Continuation rule",
+            list(RULE_LABELS.keys()),
+            help=(
+                "Strict uses the final playable अक्षर. Swara Fallback tries "
+                "the recorded vowel only if no strict continuation remains."
+            ),
         )
+
+        difficulty = st.selectbox(
+            "Computer strategy",
+            DIFFICULTIES,
+        )
+
+        min_similarity = st.slider(
+            "Corpus match tolerance",
+            0.45,
+            0.90,
+            0.60,
+            0.05,
+        )
+
+    rule_set = RULE_LABELS[rule_label]
 
     st.divider()
 
     if st.button(
-        "🔄 New Game / Reset",
+        "Start a new game",
+        type="primary",
         use_container_width=True,
     ):
         reset_game()
@@ -865,9 +852,7 @@ if st.session_state.game_over:
     )
 
     st.info(
-        "Press New Game / Reset "
-        "in the sidebar when you "
-        "want to start again."
+        "Open Game options and choose Start a new game to play again."
     )
 
 # ============================================================
@@ -885,7 +870,12 @@ left_col, right_col = st.columns(
 
 with left_col:
     previous_computer = last_move("Computer")
-    previous_player = last_move("Player")
+
+    st.html(
+        '<div class="section-heading">Your turn</div>'
+        '<div class="section-help">Recite a verse or type it below. '
+        'Review the text, then submit your move.</div>'
+    )
 
     if previous_computer:
         st.html(
@@ -898,38 +888,6 @@ with left_col:
             "</div>"
             "</div>"
         )
-
-    if previous_player:
-        st.html(
-            '<div class="previous-card">'
-            '<div class="previous-label">'
-            "Your previous accepted verse"
-            "</div>"
-            '<div class="previous-text">'
-            f'{html.escape(str(previous_player["text"]))}'
-            "</div>"
-            "</div>"
-        )
-
-    # ========================================================
-    # STEP 1 — RECITE
-    # ========================================================
-
-    st.html(
-        '<div class="turn-header">'
-        '<div class="turn-heading">'
-        '<span class="step-badge">1</span>'
-        "Recite"
-        "</div>"
-        '<div class="turn-help">'
-        "Press the microphone, "
-        "recite one Sanskrit verse, "
-        "then stop the recording. "
-        "Su-śrotā will transcribe "
-        "it automatically."
-        "</div>"
-        "</div>"
-    )
 
     if st.session_state.pending_clear_input:
         st.session_state.verse_input = ""
@@ -944,8 +902,28 @@ with left_col:
         audio_val = None
     else:
         audio_val = audiorecorder(
-            "🎙️ Start recording",
-            "⏹️ Stop recording",
+            "🎙️ Recite a verse",
+            "⏹️ Finish recording",
+            custom_style={
+                "backgroundColor": "#FFFFFF",
+                "border": "1px solid #DCE7F1",
+                "borderRadius": "12px",
+                "padding": "8px",
+            },
+            start_style={
+                "backgroundColor": "#0B5FA5",
+                "color": "#FFFFFF",
+                "border": "0",
+                "borderRadius": "9px",
+                "fontWeight": "700",
+            },
+            stop_style={
+                "backgroundColor": "#B42318",
+                "color": "#FFFFFF",
+                "border": "0",
+                "borderRadius": "9px",
+                "fontWeight": "700",
+            },
             key=(
                 "audio_input_"
                 f"{st.session_state.audio_nonce}"
@@ -1004,42 +982,14 @@ with left_col:
                 except OSError:
                     pass
 
-    # ========================================================
-    # STEP 2 — REVIEW
-    # ========================================================
-
-    st.html(
-        '<div class="turn-header">'
-        '<div class="turn-heading">'
-        '<span class="step-badge">2</span>'
-        "Review"
-        "</div>"
-        '<div class="turn-help">'
-        "Check the transcription below. "
-        "Correct any word before "
-        "you submit it."
-        "</div>"
-        "</div>"
-    )
-
-    if st.session_state.verse_input.strip():
-        st.html(
-            '<div class="review-ready">'
-            "✓ Transcription is ready. "
-            "Review it below, then use "
-            "the blue Submit Verse button."
-            "</div>"
-        )
+    st.html('<div class="input-divider">or type your verse</div>')
 
     st.text_area(
         "Your verse",
         key="verse_input",
         height=135,
         placeholder=(
-            "Your Su-śrotā transcription "
-            "will appear here. "
-            "You can also type or paste "
-            "a verse."
+            "Your transcription appears here. You can also type or paste a verse."
         ),
         disabled=st.session_state.game_over,
     )
@@ -1049,39 +999,19 @@ with left_col:
             st.session_state.last_error
         )
 
-    # ========================================================
-    # STEP 3 — SUBMIT
-    # ========================================================
-
-    st.html(
-        '<div class="turn-header">'
-        '<div class="turn-heading">'
-        '<span class="step-badge">3</span>'
-        "Submit"
-        "</div>"
-        '<div class="turn-help">'
-        "When the verse is correct, "
-        "submit it. "
-        "A valid move is added to "
-        "the chain and the "
-        "computer replies."
-        "</div>"
-        "</div>"
-    )
-
     submit_col, clear_col = st.columns(
         [2.2, 1]
     )
 
     submit_turn = submit_col.button(
-        "✅ Submit Verse & Continue",
+        "Submit verse",
         type="primary",
         use_container_width=True,
         disabled=st.session_state.game_over,
     )
 
     clear_col.button(
-        "Clear / Re-record",
+        "Clear",
         use_container_width=True,
         disabled=st.session_state.game_over,
         on_click=clear_input,
@@ -1518,8 +1448,7 @@ with right_col:
         )
 
         st.caption(
-            "Everything accepted so far, "
-            "in the order it happened."
+            "Latest move first"
         )
 
         render_history()
