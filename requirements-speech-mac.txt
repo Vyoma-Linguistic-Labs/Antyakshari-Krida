@@ -3,7 +3,6 @@ onnx>=1.7.0
 python-dateutil
 ruamel.yaml
 scikit-learn
-setuptools>=65.5.1
 tensorboard
 text-unidecode
 tqdm>=4.41.0
@@ -29,12 +28,9 @@ lhotse>=1.20.0
 marshmallow
 matplotlib
 packaging
-pyannote.core
-pyannote.metrics
 pydub
 pyloudnorm
 resampy
-ruamel.yaml
 scipy>=0.14
 soundfile
 sox
@@ -55,7 +51,7 @@ fastapi
 uvicorn
 python-multipart
 imageio-ffmpeg
-setuptools<81
+setuptools>=65.5.1,<81
 ema-pytorch==0.5.2
 pyannote.core<6
 pyannote.metrics<4

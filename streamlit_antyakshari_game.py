@@ -26,7 +26,7 @@ from antyakshari_engine import (
 
 from sanskrit_asr import transcribe_audio
 
-from yourvoic_tts import (
+from vagdhenu_tts import (
     generate_speech,
     get_last_tts_error,
     tts_available,
@@ -111,9 +111,27 @@ st.html(
     color: #F7FAFC;
 }
 
+[data-testid="stSidebar"] [data-baseweb="select"] *,
+[data-testid="stSidebar"] [data-baseweb="select"] input {
+    color: var(--ink) !important;
+}
+
+[data-testid="stSidebar"] [data-baseweb="select"] > div {
+    background: white !important;
+}
+
+[data-testid="stSidebar"] [data-baseweb="select"] svg {
+    fill: var(--ink) !important;
+}
+
 [data-testid="stSidebar"] small,
 [data-testid="stSidebar"] [data-testid="stCaptionContainer"] {
     color: #C8D6E5 !important;
+}
+
+[data-testid="stSidebar"] [data-testid="stExpander"] summary,
+[data-testid="stSidebar"] [data-testid="stExpander"] summary * {
+    color: #F7FAFC !important;
 }
 
 [data-testid="stAppDeployButton"] {
@@ -714,7 +732,7 @@ with st.sidebar:
     )
 
     if tts_ready:
-        st.caption(f"Voice: {tts_backend_name()}. Local generation can take a minute.")
+        st.caption(f"Voice: {tts_backend_name()}. The first chant takes longer to load.")
     else:
         st.caption("Computer voice is unavailable.")
 

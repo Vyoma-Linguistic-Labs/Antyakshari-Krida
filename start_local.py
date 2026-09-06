@@ -16,6 +16,7 @@ env["SUSHROTA_MODEL_PATH"] = str(ROOT / "models/sushrota/sushrota_sanskrit_asr_v
 env["SUSHROTA_API_URL"] = "http://127.0.0.1:8001"
 env["VAGDHENU_API_URL"] = "http://127.0.0.1:8001"
 env["VAGDHENU_ALLOW_GRADIO_FALLBACK"] = "false"
+env.setdefault("VAGDHENU_DEVICE", "auto")
 env["PYTHONUNBUFFERED"] = "1"
 env["TOKENIZERS_PARALLELISM"] = "false"
 children = []
